@@ -59,3 +59,7 @@ docs/_build/
 
 # Vagrant hidden folder
 .vagrant/
+
+
+# keep secrets in secret
+*secret*
