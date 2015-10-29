@@ -159,5 +159,16 @@ u }
 .flash li {
 	list-style-type: none;
 	text-align: center;
+}
 
+.fa.fa-github {
+	font-size: 30px;
+}
+
+.btn.btn-github {
+	padding: 5px;
+}
+
+.row .banner.main {
+	margin-bottom: 20px;
 }
