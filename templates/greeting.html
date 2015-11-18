@@ -1,0 +1,34 @@
+{% extends "main.html" %} 
+
+
+
+{% block content %} 
+{% include "header.html" %}
+<div class="row divider green">
+    <div class="col-md-12"></div>
+</div>
+
+<div class='flash'>
+    {% with messages = get_flashed_messages() %} {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li> <strong> {{ message }} </strong> </li>
+        {% endfor %}
+    </ul>
+    {% endif %} {% endwith %}
+</div>
+<div class="row padding-top padding-bottom">
+    <div class="col-md-12">
+        <p>Hello, {{ locals.auth_result.name }}!</p>
+        <p>
+            {% if email %} It looks like your public email address is {{ email }}.
+            {% else %} It looks like you don't have a public email. That's cool.
+            {% endif %}
+        </p>
+        <p><i>Redirecting in 3 seconds...</i></p>
+        <a href="/restaurant" title="Show Restaurants">Show Restaurants</a>
+    </div>
+</div>
+
+
+{% endblock %}

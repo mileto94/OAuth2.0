@@ -217,55 +217,63 @@ def fbconnect():
     return output
 
 
+@app.route('/logged', methods=['GET'])
+def logged_with_github():
+    github_code = request.args.get('code')
+    client_id = json.loads(open(
+        'github_client_secrets.json', 'r').read()
+    )['web']['app_id']
+    client_secret = json.loads(open(
+        'github_client_secrets.json', 'r').read()
+    )['web']['app_secret']
+    data = {
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'code': github_code,
+        'accept': 'json'
+    }
+    response = requests.post(
+        'https://github.com/login/oauth/access_token',
+        data=data)
+
+    result = dict([pair.split('=') for pair in response.content.split('&')])
+    # result = {key: value for key, value in [
+    #     pair.split('=') for pair in response.content.split('&')]}
+    access_token = result.get('access_token', '')
+
+    # check if we were granted user:email scope
+    scopes = result.get('scope', '')
+    has_user_email_scope = 'user' in scopes and 'email' in scopes
+    auth_result = requests.get(
+        'https://api.github.com/user?access_token={}'.format(
+            access_token)).json()
+    if has_user_email_scope:
+        email = requests.get(
+            'https://api.github.com/user/emails?access_token={}'.format(
+                access_token)).json()[0]['email']
+
+    login_session['username'] = auth_result['login']
+    login_session['email'] = email
+    login_session['picture'] = auth_result['avatar_url']
+    login_session['provider'] = 'github'
+
+    user_id = getUserID(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
+
+    login_session['user_id'] = user_id
+    return render_template('greeting.html', locals=locals())
+
+
 @app.route('/ghconnect', methods=['POST'])
 def ghconnect():
-    # # Validate state token
-    # if request.args.get('state') != login_session['state']:
-    #     response = make_response(json.dumps('Invalid state parameter.'), 401)
-    #     response.headers['Content-Type'] = 'application/json'
-    #     return response
-    # Obtain authorization code
-    # access_token = request.data
-
     app_id = json.loads(open(
         'github_client_secrets.json', 'r').read()
     )['web']['app_id']
-    app_secret = json.loads(open(
-        'github_client_secrets.json', 'r').read()
-    )['web']['app_secret']
     url = 'https://github.com/login/oauth/authorize?scope=user:email&client_id=%s' % (
         app_id)
-
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
-    # data = json.loads(result)
-    # print(result)
-    # login_session['provider'] = 'github'
-    # login_session['username'] = data['user:name']
-    # login_session['email'] = data['user:email']
-    # login_session['facebook_id'] = data['user:id']
-    # # Get user picture
-    # login_session['picture'] = data['user:picture']
-
-    # # The token must be stored in the login_session in order to properly logout, let's strip out the information before the equals sign in our token
-    # login_session['access_token'] = access_token
-
-    # # see if user exists
-    # user_id = getUserID(login_session['email'])
-    # if not user_id:
-    #     user_id = createUser(login_session)
-    # login_session['user_id'] = user_id
-
-    # output = ''
-    # output += '<h1>Welcome, '
-    # output += login_session['username']
-    # output += '!</h1>'
-    # output += '<img src="'
-    # output += login_session['picture']
-    # output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    # flash("you are now logged in as %s" % login_session['username'])
-    # return output
-    # return redirect(url_for('showRestaurants'))
     return result
 
 
@@ -354,6 +362,7 @@ def restaurantsJSON():
 @app.route('/restaurant/')
 def showRestaurants():
     restaurants = session.query(Restaurant).order_by(asc(Restaurant.name))
+    print(login_session)
     if 'username' not in login_session:
         return render_template(
             'publicrestaurants.html', restaurants=restaurants)
@@ -421,6 +430,9 @@ def showMenu(restaurant_id):
     all_items = {
         item.course: item for item in items
     }
+    print('********showMenu****************')
+    print(locals())
+    print('********showMenu****************')
     if('username' not in login_session or
             creator.id != login_session['user_id']):
         return render_template(
